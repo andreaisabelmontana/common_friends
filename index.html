@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mutual-Connection Path Finder — Built From Scratch</title>
+<meta name="description" content="An original from-scratch build of a mutual-connection path finder: a breadth-first search over a social follower graph that finds the shortest chain of mutual friends between two people." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --accent:#db2777; --accent-soft:#fce7f1; --ink:#16201f; --muted:#5d6b69;
+    --line:#dfe5e3; --bg:#fbfcfb; --card:#ffffff;
+    --serif:'Fraunces',Georgia,serif; --sans:'Inter',system-ui,sans-serif; --mono:'JetBrains Mono',monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.65;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:860px;margin:0 auto;padding:0 28px}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  code{font-family:var(--mono);font-size:.86em;background:var(--accent-soft);padding:.1em .4em;border-radius:4px;color:#be185d}
+  h1,h2,h3{font-family:var(--serif);font-weight:500;line-height:1.15;letter-spacing:-.01em}
+  /* Header */
+  header.hero{padding:88px 0 56px;border-bottom:1px solid var(--line)}
+  .eyebrow{font-family:var(--mono);font-size:.74rem;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin:0 0 22px}
+  h1{font-size:clamp(2.6rem,6vw,4.1rem);margin:0 0 18px}
+  .lede{font-size:1.22rem;color:var(--muted);max-width:62ch;margin:0 0 28px}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;font-size:.82rem}
+  .chip{font-family:var(--mono);font-size:.72rem;letter-spacing:.04em;border:1px solid var(--line);border-radius:999px;padding:5px 12px;color:var(--muted);background:var(--card)}
+  /* Sections */
+  section{padding:54px 0;border-bottom:1px solid var(--line)}
+  .kicker{font-family:var(--mono);font-size:.74rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin:0 0 14px}
+  h2{font-size:clamp(1.7rem,3.4vw,2.3rem);margin:0 0 20px}
+  h3{font-size:1.2rem;margin:0 0 6px}
+  p{margin:0 0 18px;max-width:68ch}
+  .muted{color:var(--muted)}
+  /* Stack grid */
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:8px}
+  .tool{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px}
+  .tool .t{font-family:var(--mono);font-size:.78rem;color:var(--accent);letter-spacing:.04em;margin-bottom:8px}
+  .tool h3{font-size:1.05rem;font-family:var(--sans);font-weight:600;margin-bottom:6px}
+  .tool p{font-size:.92rem;color:var(--muted);margin:0}
+  /* Pipeline / modules */
+  ol.flow{counter-reset:s;list-style:none;padding:0;margin:24px 0 0}
+  ol.flow li{position:relative;padding:18px 0 18px 56px;border-top:1px solid var(--line)}
+  ol.flow li:before{counter-increment:s;content:counter(s,decimal-leading-zero);position:absolute;left:0;top:18px;font-family:var(--mono);font-size:.8rem;color:var(--accent);border:1px solid var(--line);border-radius:8px;width:38px;height:38px;display:grid;place-items:center;background:var(--card)}
+  ol.flow li h3{font-family:var(--sans);font-size:1.02rem;font-weight:600;margin:0 0 4px}
+  ol.flow li p{margin:0;font-size:.93rem;color:var(--muted)}
+  .tag{display:inline-block;font-family:var(--mono);font-size:.68rem;padding:2px 7px;border-radius:5px;margin-left:8px;vertical-align:middle}
+  .tag.on{background:#e6f7ec;color:#1c7a43}
+  .tag.off{background:#fdecea;color:#b23b2c}
+  /* Callout */
+  .callout{background:var(--accent-soft);border:1px solid #f6cbdf;border-radius:14px;padding:24px 26px;margin-top:8px}
+  .callout p:last-child{margin:0}
+  /* Reflection list */
+  ul.learn{list-style:none;padding:0;margin:8px 0 0}
+  ul.learn li{padding:14px 0 14px 30px;border-top:1px solid var(--line);position:relative;color:var(--muted);max-width:68ch}
+  ul.learn li:before{content:"→";position:absolute;left:0;color:var(--accent);font-family:var(--mono)}
+  ul.learn li b{color:var(--ink);font-weight:600}
+  /* Footer */
+  footer{padding:48px 0 80px}
+  .credit{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:26px}
+  .credit .k{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+  footer .fine{font-size:.8rem;color:var(--muted);margin-top:22px;text-align:center}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">From-Scratch Build · Graph Algorithms</p>
+    <h1>Mutual-Connection Path Finder</h1>
+    <p class="lede">Give it two social-media accounts and it finds the shortest chain of mutual friends linking them — the real "you two have a friend in common" path, computed instead of guessed. Built from scratch to learn how graph search turns a tangle of follows into a clean answer.</p>
+    <div class="meta">
+      <span class="chip">Python</span><span class="chip">Breadth-first search</span><span class="chip">REST API</span>
+      <span class="chip">Pagination</span><span class="chip">Graph traversal</span>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">What it is</p>
+    <h2>Six degrees, actually measured</h2>
+    <p>The tool treats a social network as a <b>graph</b>: every account is a node, every follow an edge. Given a start account and a target, it explores outward through mutual connections until it reaches the target, then reports both the number of hops and the exact chain of people in between. The result is the literal shortest path of friends-of-friends.</p>
+    <p>I built this to make the "small world" idea concrete. Everyone says any two people are a handful of connections apart — this is the algorithm that proves it for a specific pair, and shows the route.</p>
+    <div class="callout">
+      <p><b>The core idea I wanted to learn:</b> the shortest path through a network of equal-weight links is exactly what <i>breadth-first search</i> finds. Explore layer by layer — all direct contacts, then their contacts — and the first time you reach the target, you've found the shortest possible chain, guaranteed.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">The stack</p>
+    <h2>Tools under the hood</h2>
+    <p class="muted">This rebuild is small but touches real-world data plumbing as well as the core algorithm. Here is what each piece does.</p>
+    <div class="grid">
+      <div class="tool"><div class="t">algorithm</div><h3>Breadth-first search</h3><p>The heart of it — explores the graph level by level so the first route to the target is the shortest one.</p></div>
+      <div class="tool"><div class="t">structure</div><h3>Queue + visited set</h3><p>A FIFO queue drives the frontier; a visited set stops the search revisiting accounts and looping forever.</p></div>
+      <div class="tool"><div class="t">data</div><h3>Social REST API</h3><p>Follower lists come from a hosted API; the code wraps the endpoints it needs to expand each node.</p></div>
+      <div class="tool"><div class="t">paging</div><h3>Pagination handling</h3><p>Follower counts run into the thousands, so requests are fetched in batches with continuation tokens.</p></div>
+      <div class="tool"><div class="t">trace</div><h3>Predecessor map</h3><p>A back-pointer for every visited node lets the final path be reconstructed by walking back from the target.</p></div>
+      <div class="tool"><div class="t">output</div><h3>JSON export</h3><p>The people along the discovered chain are enriched with profile details and written out as a JSON file.</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">Architecture</p>
+    <h2>How the search unfolds</h2>
+    <p>The program runs as a single traversal with a depth cap, so it stays bounded even on a huge network. Each step does one clear thing.</p>
+    <ol class="flow">
+      <li><h3>Seed the queue <span class="tag on">live</span></h3><p>Start from the first account, mark it visited, and put it on the queue at distance zero.</p></li>
+      <li><h3>Expand a node <span class="tag on">live</span></h3><p>Pull the next account and fetch its full follower list, fetching across all pages.</p></li>
+      <li><h3>Find mutuals <span class="tag on">live</span></h3><p>Compute the connections to explore next and enqueue any not yet seen, one hop deeper.</p></li>
+      <li><h3>Check the target <span class="tag on">live</span></h3><p>If the target appears, stop — by the rules of breadth-first search this is the shortest path.</p></li>
+      <li><h3>Reconstruct <span class="tag on">live</span></h3><p>Walk the predecessor pointers back from the target to build the ordered chain of people.</p></li>
+      <li><h3>Enrich &amp; save <span class="tag on">live</span></h3><p>Pull profile details for everyone on the chain and write the result out as JSON.</p></li>
+    </ol>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">How it runs</p>
+    <h2>Bounded, paged, traceable</h2>
+    <p>Real social graphs are enormous, so the design is as much about restraint as about search:</p>
+    <ul class="learn">
+      <li><b>Depth limit:</b> the search stops after a set number of hops, so it returns "no connection found" instead of running forever.</li>
+      <li><b>Batched fetching:</b> followers arrive in pages of up to a thousand, stitched together with continuation tokens.</li>
+      <li><b>Visited tracking:</b> a set of seen accounts keeps the traversal from looping back on itself in a dense graph.</li>
+      <li><b>Path provenance:</b> because every node remembers who reached it, the answer is a route you can read, not just a number.</li>
+    </ul>
+    <p class="muted" style="margin-top:18px">In my rebuild I focused on keeping the traversal correct and bounded — on a graph this large, an unguarded search is the difference between an answer and a hang.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="kicker">Reflection</p>
+    <h2>What rebuilding it taught me</h2>
+    <ul class="learn">
+      <li><b>BFS earns its keep on unweighted graphs.</b> When every link counts the same, exploring breadth-first <i>is</i> the shortest-path algorithm — no fancier method needed.</li>
+      <li><b>The data plumbing dwarfs the algorithm.</b> The traversal is a dozen lines; pagination, rate limits and missing fields are where the real work lives.</li>
+      <li><b>Predecessor pointers are underrated.</b> One cheap back-pointer per node turns "how far" into "which route", which is the part people actually want.</li>
+      <li><b>Bound everything.</b> A depth cap and a visited set are what keep a search over a near-infinite network from becoming a runaway.</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="credit">
+      <div class="k">About this build</div>
+      <p style="margin:0">An original, from-scratch build by <b>Andrea</b> — written to learn how breadth-first search over a paginated social graph finds the shortest chain of mutual connections between two people. Plain HTML/CSS, deployed on GitHub Pages.</p>
+    </div>
+    <p class="fine">Built from scratch by Andrea · one of an ongoing series of learning builds.</p>
+  </div>
+</footer>
+</body>
+</html>
